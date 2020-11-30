@@ -28,11 +28,11 @@ class Twitter_Scraper(object):
         tweets = tweepy.Cursor(api.search
                                , q = 'covid19'
                                , lang = 'en'
-                               , since = '2020-11-22'
-##                               , until = '2020-11-22'
+                               , since = '2020-11-29'
+##                               , until = '2020-11-29'
                                , result_type = 'mixed'
                                , tweet_mode = 'extended'
-                               ).items(1000)
+                               ).items(200)
         for i in tweets:
             date = i.created_at.strftime('%Y%m%d%H%M%S')
             f_id = str(uuid4())
