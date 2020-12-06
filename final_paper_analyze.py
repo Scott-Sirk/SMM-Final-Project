@@ -1,10 +1,11 @@
 
 #analyize data for paper 2
 
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
 
 from sklearn.svm import SVC
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.linear_model import SGDClassifier
 
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
@@ -47,19 +48,19 @@ class Twitter_ML(object):
     def data_to_vector(self, data, vocab = None):
         text_only = [item[1] for item in data]
         answers = [item[0] for item in data]
-        tf_idf = TfidfVectorizer(ngram_range = (1, 3)
+        cv = CountVectorizer(ngram_range = (1, 3)
                                  , vocabulary = vocab
                                  , preprocessor = self.process_strings
                                  , tokenizer = nltk.word_tokenize
+                                 , binary = True
                                  )
-        X = tf_idf.fit_transform(text_only)
+        X = cv.fit_transform(text_only)
         bow = X.toarray()
-        return bow, answers, tf_idf.vocabulary_
+        return bow, answers, cv.vocabulary_
 
     def create_model(self, X, y):
-        model = SVC()
-        #SVM has overtaken naive bayes
-##        model = MultinomialNB()
+##        model = SVC()
+        model = SGDClassifier(loss = 'log')
         model.fit(X, y)
         return model
 
@@ -73,7 +74,7 @@ class Twitter_ML(object):
 
 def main():
 
-    file_locn = r'C:\Users\Scott\Desktop\social_media_mining\SMM-Final-Project\train'
+    file_locn = r'C:\Users\Scott\Desktop\social_media_mining\SMM-Final-Project\old data\train'
 
     obj = Twitter_ML(file_locn)
     data = obj.load_data()
@@ -81,7 +82,7 @@ def main():
     model = obj.create_model(bow, answers)
     #-----------------------------------------------#
 
-    test_files = r'C:\Users\Scott\Desktop\social_media_mining\SMM-Final-Project\test'
+    test_files = r'C:\Users\Scott\Desktop\social_media_mining\SMM-Final-Project\old data\test'
 
     obj2 = Twitter_ML(test_files)
     data2 = obj2.load_data()
@@ -92,7 +93,7 @@ def main():
     #-----------------------------------------------#
     #create predictions and save the data
 
-    real_files = r'C:\Users\Scott\Desktop\social_media_mining\SMM-Final-Project\real_data'
+    real_files = r'C:\Users\Scott\Desktop\social_media_mining\SMM-Final-Project\old data\real_data'
     obj3 = Twitter_ML(real_files)
     data3 = obj3.load_data()
     bow3, ans_unknown, vocab3 = obj3.data_to_vector(data3, vocab)
