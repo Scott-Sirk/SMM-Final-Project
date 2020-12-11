@@ -2,11 +2,7 @@
 #analyize data for paper 2
 
 from sklearn.feature_extraction.text import CountVectorizer
-
-from sklearn.svm import SVC
-from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier
-
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 import pandas as pd
@@ -21,14 +17,8 @@ class Twitter_ML(object):
 
     def load_data(self):
         raw_data = []
-        for full_path, sub_dirs, files in os.walk(self._file_locn):
-            for file in files:
-                answer = full_path.split('\\')[-1]
-                with open(full_path + '\\' + file, 'r', encoding = 'utf-8') as f:
-                    content = f.read()
-                row = [answer, content, file]
-                raw_data.append(row)
-        return raw_data
+        df = pd.read_csv(self._file_locn)
+        return df
 
     def process_strings(self, string):
         copy = string
@@ -46,8 +36,8 @@ class Twitter_ML(object):
         return copy
 
     def data_to_vector(self, data, vocab = None):
-        text_only = [item[1] for item in data]
-        answers = [item[0] for item in data]
+        text_only = data['text']
+        answers = data['sentiment']
         cv = CountVectorizer(ngram_range = (1, 3)
                                  , vocabulary = vocab
                                  , preprocessor = self.process_strings
@@ -55,11 +45,9 @@ class Twitter_ML(object):
                                  , binary = True
                                  )
         X = cv.fit_transform(text_only)
-        bow = X.toarray()
-        return bow, answers, cv.vocabulary_
+        return X, answers, cv.vocabulary_
 
     def create_model(self, X, y):
-##        model = SVC()
         model = SGDClassifier(loss = 'log')
         model.fit(X, y)
         return model
@@ -74,67 +62,39 @@ class Twitter_ML(object):
 
 def main():
 
-    file_locn = r'C:\Users\Scott\Desktop\social_media_mining\SMM-Final-Project\old data\train'
+    train_file = r'data/states/train.csv'
 
-    obj = Twitter_ML(file_locn)
-    data = obj.load_data()
-    bow, answers, vocab = obj.data_to_vector(data)
-    model = obj.create_model(bow, answers)
-    #-----------------------------------------------#
-
-    test_files = r'C:\Users\Scott\Desktop\social_media_mining\SMM-Final-Project\old data\test'
-
-    obj2 = Twitter_ML(test_files)
-    data2 = obj2.load_data()
-    bow2, answers2, vocab2 = obj2.data_to_vector(data2, vocab)
-
-    obj2.test_model(model, bow2, answers2)
+    train_obj = Twitter_ML(train_file)
+    train_data = train_obj.load_data()
+    X_train, y_train, vocab = train_obj.data_to_vector(train_data)
+    model = train_obj.create_model(X_train, y_train)
 
     #-----------------------------------------------#
-    #create predictions and save the data
 
-    real_files = r'C:\Users\Scott\Desktop\social_media_mining\SMM-Final-Project\old data\real_data'
-    obj3 = Twitter_ML(real_files)
-    data3 = obj3.load_data()
-    bow3, ans_unknown, vocab3 = obj3.data_to_vector(data3, vocab)
+    test_files = r'data/states/test.csv'
 
-    predictions = obj3.use_model(model, bow3)
+    test_obj = Twitter_ML(test_files)
+    test_data = test_obj.load_data()
+    X_test, y_test, vocab_test = test_obj.data_to_vector(test_data, vocab)
+    test_obj.test_model(model, X_test, y_test)
+    
 
-    print('here')
+    #-----------------------------------------------#
 
-    df = pd.DataFrame(columns = ['account'
-                                 , 'year'
-                                 , 'month'
-                                 , 'day'
-                                 , 'hour'
-                                 , 'minute'
-                                 , 'second'
-                                 , 'collection_period'
-                                 , 'prediction'])
-    for i, lst in enumerate(data3):
-        date, source_file = lst[2].split('__')[:2]
-        source, ext = source_file.split('.')
-        year = date[:4]
-        month = date[4:6]
-        day = date[6:8]
-        hour = date[8:10]
-        minute = date[10:12]
-        second = date[12:]
-        predict = predictions[i]
-        df = df.append({'account':source
-                        , 'year':year
-                        , 'month':month
-                        , 'day':day
-                        , 'hour':hour
-                        , 'minute':minute
-                        , 'second':second
-                        , 'collection_period':year+month+day+hour
-                        , 'prediction':predict}
-                       , ignore_index = True)
+    real = r'data/states/new_mexico.csv'
+    real_obj = Twitter_ML(real)
+    real_data = real_obj.load_data()
+    X, y, vocab_real = real_obj.data_to_vector(real_data, vocab)
+    predictions = real_obj.use_model(model, X)
 
-    df = df.drop_duplicates()
-    df.to_csv('final_paper_data.csv')
+    df = pd.DataFrame()
 
+    for idx, row in real_data.iterrows():
+
+        row['sentiment'] = predictions[idx]
+        df = df.append(row)
+
+    df.to_csv(r'data/states/new_mexico_pred.csv')
 
 
 if __name__ == '__main__':
